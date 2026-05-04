@@ -87,7 +87,7 @@ wheels = [
 ]
 
 [[package]]
-name = "dress-api"
+name = "dress-acofork"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

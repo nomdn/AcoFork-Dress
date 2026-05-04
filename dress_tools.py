@@ -86,13 +86,15 @@ def run_git_pull():
 async def random_pick(index_id :list,img_base_url :str) -> dict:
     count = len(index_id)
     id = random.randint(1, count)
-    entry = index_id[str(id)]
+    entry = index_id[str(id)] # type: ignore
     url = img_base_url + entry["path"]
     group = entry["group"]
+    tags = entry.get("tags", [])
 
     return {
         "group": group,
         "url": url,
+        "tags": tags,
     }
 async def random_pick_group(index_group :dict,img_base_url :str,group:str) -> dict:
     if group not in index_group:
@@ -100,7 +102,21 @@ async def random_pick_group(index_group :dict,img_base_url :str,group:str) -> di
     entries = index_group[group]["contribution"]
     entry = random.choice(entries)
     url = img_base_url + entry["path"]
+    tags = entry.get("tags", [])
     return {
         "group": group,
         "url": url,
+        "tags": tags,
+    }
+async def random_pick_tag(index_tag :dict,img_base_url :str,tag:str) -> dict:
+    if tag not in index_tag:
+        raise ValueError(f"标签 {tag} 不存在")
+    entries = index_tag[tag]
+    entry = random.choice(entries)
+    url = img_base_url + entry["path"]
+    group = entry.get("group", "未知分组")
+    return {
+        "group": group,
+        "url": url,
+        "tags": entry.get("tags", []),
     }

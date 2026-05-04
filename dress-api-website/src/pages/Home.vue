@@ -216,7 +216,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 88vh;
+  min-height: 100vh;
   --el-color-primary: #313131;
 }
 

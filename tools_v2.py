@@ -110,6 +110,17 @@ async def convert_index_group_to_index_id(index_group: dict) -> dict:
             index_id[id] = contribution
             id += 1
     return index_id
+async def convert_index_group_to_index_tag(index_group: dict) -> dict:
+    index_tag = {}
+    for group,data in index_group.items():
+        for contribution in data["contribution"]:
+            for tag in contribution["tags"]:
+                if tag not in index_tag:
+                    index_tag[tag] = []
+                contribution["group"]=group
+                index_tag[tag].append(contribution)
+    return index_tag
+            
 
 
 
@@ -121,3 +132,6 @@ if __name__ == "__main__":
     index_id = asyncio.run(convert_index_group_to_index_id(index_group))
     with open("public/index_0.json", "w", encoding="utf-8") as f:
         json.dump(index_id, f, ensure_ascii=False, indent=4)
+    index_tag = asyncio.run(convert_index_group_to_index_tag(index_group))
+    with open("public/index_2.json", "w", encoding="utf-8") as f:
+        json.dump(index_tag, f, ensure_ascii=False, indent=4)

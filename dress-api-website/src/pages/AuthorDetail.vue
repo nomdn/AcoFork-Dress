@@ -1,8 +1,8 @@
 <script setup>
-import { ref,  onMounted,inject,computed } from 'vue';
+import { ref,  onMounted,inject,computed ,onBeforeUnmount} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import axios from 'axios';
-import { Sunny, Moon, Loading } from '@element-plus/icons-vue';
+import { Sunny, Moon, Loading ,Picture} from '@element-plus/icons-vue';
 import { useDark, useToggle } from '@vueuse/core';
 import MarkdownIt from 'markdown-it';
 
@@ -14,7 +14,9 @@ const navigateToHome = () => {
 const route = useRoute();
 const router = useRouter();
 const authorname = route.params.authorname;
-
+const currentPage = ref(1);
+const pageSize = ref(5);
+const size = ref("default");
 const isDark = useDark();
 const toggleDark = useToggle(isDark);
 const activeIndex = ref('1');
@@ -26,6 +28,7 @@ const isLoading = inject('isLoading');
 const authorData = ref(null);
 const markdownText = ref('');
 const srcList = ref([]);
+const shouldShowImages = ref([])
 const createSrcList = () => {
   if (authorData.value && authorData.value.contribution) {
     srcList.value = authorData.value.contribution.map(image => imgBaseURL.value + image.path);
@@ -77,11 +80,52 @@ const formatDate = (dateString) => {
 const handleImageError = (e) => {
   e.target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="%23000000"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="14" fill="%23F8F8FF">图片无法加载</text></svg>';
 };
+const isNarrow = ref(false);
+let mediaQueryList = window.matchMedia('(max-width: 768px)');
+const paginationModules = () =>{
+  if (!isNarrow.value) {
+    size.value = "small";
+    return "total, sizes, prev, pager, next, jumper";
+
+  }else{
+    size.value = "default";
+    return "sizes,pager, prev, next";
+
+  }
+}
+function handleSizeChange(newSize) {
+  pageSize.value = newSize;
+  currentPage.value = 1; // 切换页大小时重置到第一页
+  shouldShowImages.value = authorData.value.contribution.slice(0, pageSize.value);
+}
+function handleCurrentChange(newPage) {
+  currentPage.value = newPage;
+  shouldShowImages.value = authorData.value.contribution.slice((currentPage.value - 1) * pageSize.value, currentPage.value * pageSize.value);
+}
+async function initPage() {
+  await loadAuthorData();
+  shouldShowImages.value = authorData.value ? authorData.value.contribution.slice(0, pageSize.value) : [];
+}
+initPage();
 
 onMounted(() => {
-  loadAuthorData();
+
+  isNarrow.value = mediaQueryList.matches;
   
+  // 监听窗口大小变化（可选，增强体验）
+  const handler = (e) => {
+    isNarrow.value = e.matches;
+  };
+  mediaQueryList.addEventListener('change', handler);
+
+  // 清理监听器
+  onBeforeUnmount(() => {
+    mediaQueryList.removeEventListener('change', handler);
+  });
+
+  console.log("当前设备是否是窄屏：" + isNarrow.value);
 });
+
 
 </script>
 
@@ -127,7 +171,7 @@ onMounted(() => {
 
 
               <el-image 
-                v-for="(image, index) in authorData.contribution" 
+                v-for="(image, index) in shouldShowImages" 
                 :key="index"
                 :src="imgBaseURL + image.path" 
                 fit="cover" 
@@ -135,15 +179,30 @@ onMounted(() => {
                 @error="handleImageError"
                 :preview-src-list="srcList"
                 :initial-index="index"
+                lazy
               >
               <template #placeholder>
                 <div class="image-header">
                   <el-icon class="is-loading"><Loading /></el-icon>
                 </div>
               </template>
+
             </el-image>
           </div>
         </div>
+        <el-pagination
+          v-if = "authorData.contribution"
+          v-model:page-size="pageSize"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+          :current-page="currentPage"
+          :page-sizes="[5, 10, 20,40]"
+          :page-size="pageSize"
+          :layout="paginationModules()"
+          :total="authorData.contribution.length"
+          :size="size.value"
+        >
+        </el-pagination>
       </div>
 
     </div>
@@ -166,7 +225,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 88vh;
+  min-height: 100vh;
   --el-color-primary: rgb(0, 0, 0);
 }
 

@@ -14,13 +14,13 @@ const config = {
 
     // 主服务配置（生产环境推荐地址）
     remote: {
-        remoteURL: 'http://localhost:8092/',     // API 根地址
-        imgURL: 'http://localhost:8092/img/'     // 本地托管图片的访问前缀（仅在非 lite 模式下有效）
+        remoteURL: 'https://acofork.wsmdn.top/',     // API 根地址
+        imgURL: 'https://acofork.wsmdn.top/img/'     // 本地托管图片的访问前缀（仅在非 lite 模式下有效）
     },
 
     // 回退服务配置（CDN 备用地址，适用于主服务宕机或网络受限场景）
     rollback: {
-        remoteURL: 'https://testingcf.jsdelivr.net/gh/nomdn/dress-api@main/',
+        remoteURL: 'https://testingcf.jsdelivr.net/gh/nomdn/Acofork-Dress@main/',
         imgURL: 'https://testingcf.jsdelivr.net/gh/Cute-Dress/Dress@master/'
     }
 };

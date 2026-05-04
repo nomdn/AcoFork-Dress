@@ -30,13 +30,14 @@ from urllib.parse import urljoin, urlparse
 from httpx import TimeoutException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager  # 添加这个导入
-from dress_tools import run_git_pull, get_github_index,random_pick,random_pick_group
+from dress_tools import run_git_pull, get_github_index,random_pick,random_pick_group,random_pick_tag
 from tools_v2 import build_index_by_group, convert_index_group_to_index_id
 
 
 
 index_group = {}
 index_id = {}
+index_tag = {}
 ports = 8092
 log_level = "INFO"
 lite_mode = "false"
@@ -197,11 +198,12 @@ async def run_one_sync():
 @app.post("/v1/acofork", summary="获取 acofrok 的自拍")
 async def random_setu(request: Request,
                       num: int = Query(1, description="可选，指定返回数量，默认为 1"),
-                      group: str = Query(None, description="可选，指定分组名称以获取该分组的图片"),):
+                      group: str = Query(None, description="可选，指定分组名称以获取该分组的图片"),
+                      tag: str = Query(None, description="可选，指定标签名称以获取该标签的图片")):
     """
     你 GET 一下就行了
     参数放 url
-    POST 也行，参数放在 body 里，json 格式，num 和 group 都是可选的，例如：
+    POST 也行，参数放在 body 里，json 格式，num 和 group tag 都是可选的，例如：
     {"num": 3, "group": "nekozzx"}
     """
     # 检查是否为 POST 请求，如果是，则从请求体获取参数
@@ -210,20 +212,25 @@ async def random_setu(request: Request,
             body = await request.json()
             num = body.get("num", num)
             group = body.get("group", group)
+            tag = body.get("tag", tag)
             if isinstance(group, str):
                 group = [group]  # 如果是单个字符串，转换为列表
+            if isinstance(tag, str):
+                tag = [tag]  # 如果是单个字符串，转换为列表
         except Exception:
             pass
     elif request.method == "GET":
         if group:
             group = group.split("|")
+        if tag:
+            tag = tag.split("|")
         else:
             pass
     else:
         raise HTTPException(status_code=405, detail="Method Not Allowed")
 
     base_url = request.base_url
-    global index_id,index_group
+    global index_id,index_group,index_tag
 
     max_count = len(index_id.keys())
     if max_count == 0:
@@ -234,6 +241,8 @@ async def random_setu(request: Request,
                 max_count = len(index_id.keys())
             with open("public/index_1.json", "r", encoding="utf-8") as f:
                 index_group = json.load(f)
+            with open("public/index_2.json", "r", encoding="utf-8") as f:
+                index_tag = json.load(f)
         except:
             return {"code": 500, "message": "No data available yet, please try again later."}
     
@@ -262,6 +271,22 @@ async def random_setu(request: Request,
                 results.append(entry)
             else:
                 continue
+    elif tag:
+        # 根据标签获取图片
+        for one_tag in tag:
+            if one_tag in index_tag:
+                group_all_count += len(index_tag[one_tag])
+            else:
+                raise HTTPException(status_code=404, detail=f"Tag {one_tag} Not Found")
+        num = min(num, group_all_count)
+        while len(results) < num:
+            now_tag = random.choice(tag)
+            entry = await random_pick_tag(index_tag, img_base_url, now_tag)
+            if entry["url"] not in used_paths:
+                used_paths.add(entry["url"])
+                results.append(entry)
+            else:
+                continue
     else:
         # 随机选择 num 个不同的图片
         while len(results) < num:
@@ -271,6 +296,8 @@ async def random_setu(request: Request,
                 results.append(entry)
             else:
                 continue
+    
+
     # 如果只请求一个，返回单个对象，保持向后兼容
     if num == 1 and results:
         return results[0]
@@ -337,7 +364,27 @@ async def return_group_info(group: Annotated[str, Path(description="分组名称
         return {group: group_data}
     except KeyError:
         raise HTTPException(status_code=404, detail="Group not found")
+@app.get("/v1/acofork/tag/{tag}", summary="获取指定标签的图片信息")
+@app.post("/v1/acofork/tag/{tag}", summary="获取指定标签的图片信息")
+async def return_tag_info(tag: Annotated[str, Path(description="标签名称")]):
+    """
+    获取指定标签名称的图片信息
+    """
+    try:
+        global index_tag
+        if len(index_tag) == 0:  # 索引为空时立即尝试读本地索引
+            try:
+                with open("public/index_2.json", "r", encoding="utf-8") as f:
+                    index_tag = json.load(f)
+            except Exception as e:
+                logging.warning(f"本地作者索引文件读取失败：{e}")
+                # 立即开始一次同步
+                raise HTTPException(status_code=503, detail="Index is not available yet, please try again later.")
 
+        tag_data = index_tag[tag]
+        return {tag: tag_data}
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Group not found")
 @app.get("/i/love/you",include_in_schema=False)
 async def love_you(response: Response):
     which = random.randint(0, 1)

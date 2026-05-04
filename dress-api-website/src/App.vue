@@ -5,8 +5,8 @@ import config from './config/index';
 
 // 共享数据
 const groupedImages = ref({});
-const remoteAPI = ref('http://localhost:8092/');
-const imgBaseURL = ref('https://testingcf.jsdelivr.net/gh/Cute-Dress/Dress@master/');
+const remoteAPI = ref(config.remote.remoteURL);
+const imgBaseURL = ref(config.remote.imgURL);
 const isLoading = ref(true);
 const useLite = ref(config.useLite);
 if (config.remote.remoteURL) {
@@ -67,7 +67,7 @@ const testCdnUrls = () => {
     axios.get(testURL)
       .then(() => {
         imgBaseURL.value = cdn + "gh/Cute-Dress/Dress@master/";
-        remoteAPI.value = cdn + "gh/nomdn/dress-api@main/public/";
+        remoteAPI.value = cdn + "gh/nomdn/Acofork-Dress@main/public/";
         console.log('使用CDN:', imgBaseURL.value);
         return; // 成功后停止测试其他CDN
       })
