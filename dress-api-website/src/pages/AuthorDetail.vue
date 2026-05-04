@@ -178,7 +178,7 @@ onMounted(() => {
                 class="image-preview"
                 @error="handleImageError"
                 :preview-src-list="srcList"
-                :initial-index="index"
+                :initial-index="(currentPage - 1) * pageSize + index"
                 lazy
               >
               <template #placeholder>
